@@ -6,7 +6,7 @@
 /build/
 *.apk
 *.aab
-export_presets.cfg
+# NOTE: export_presets.cfg IS committed on purpose — CI needs it to export.
 
 # OS / editor cruft
 .DS_Store
