@@ -38,7 +38,25 @@ jobs:
           mkdir -p web
           godot --headless --import || true
           godot --headless --verbose --export-debug "Web" web/index.html
-          echo "--- web/ ---"; ls -la web/
+          echo "--- web/ (raw export) ---"; ls -la web/
+
+      - name: Add PWA manifest + service worker (for installability / PWABuilder)
+        run: |
+          cp web_extra/manifest.json web_extra/sw.js web_extra/icon-192.png web_extra/icon-512.png web/
+          # inject <link rel=manifest> + mobile meta into <head>
+          awk '/<\/head>/{
+                print "<link rel=\"manifest\" href=\"manifest.json\">";
+                print "<meta name=\"theme-color\" content=\"#0b0d18\">";
+                print "<meta name=\"mobile-web-app-capable\" content=\"yes\">";
+                print "<meta name=\"apple-mobile-web-app-capable\" content=\"yes\">";
+                print "<link rel=\"apple-touch-icon\" href=\"icon-192.png\">";
+              } {print}' web/index.html > web/index.tmp && mv web/index.tmp web/index.html
+          # register the service worker before </body>
+          awk '/<\/body>/{
+                print "<script>if(\"serviceWorker\" in navigator){addEventListener(\"load\",function(){navigator.serviceWorker.register(\"sw.js\").catch(function(){});});}</script>";
+              } {print}' web/index.html > web/index.tmp && mv web/index.tmp web/index.html
+          echo "--- web/ (with PWA) ---"; ls -la web/
+          echo "--- head check ---"; grep -i "manifest\|theme-color\|serviceWorker" web/index.html || true
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
