@@ -21,11 +21,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Make export templates available to this job's HOME
+      - name: Bring Godot templates + editor settings into this job's HOME
         run: |
-          mkdir -p "$HOME/.local/share/godot/export_templates"
+          mkdir -p "$HOME/.local/share/godot/export_templates" "$HOME/.config/godot"
           cp -r /root/.local/share/godot/export_templates/* "$HOME/.local/share/godot/export_templates/" 2>/dev/null || true
-          ls -la "$HOME/.local/share/godot/export_templates/" || true
+          cp -r /root/.config/godot/* "$HOME/.config/godot/" 2>/dev/null || true
+          echo "--- env ---"; echo "HOME=$HOME"; echo "JAVA_HOME=$JAVA_HOME"; echo "ANDROID_HOME=$ANDROID_HOME"; echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          echo "--- jvm dirs ---"; ls -d /usr/lib/jvm/* 2>/dev/null || true
+          echo "--- image editor settings android/java keys ---"; grep -iE "java_sdk|android_sdk|debug_keystore" /root/.config/godot/editor_settings-4.tres 2>/dev/null || echo "NONE in image config"
+          echo "--- templates ---"; ls -la "$HOME/.local/share/godot/export_templates/" || true
 
       - name: Generate Android debug keystore
         run: |
