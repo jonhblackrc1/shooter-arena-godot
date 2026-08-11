@@ -47,6 +47,13 @@ jobs:
 
       - name: Export debug APK
         run: |
+          echo "=== export templates dir ==="
+          ls -la "$HOME/.local/share/godot/export_templates/" || echo "(missing templates dir)"
+          for d in "$HOME/.local/share/godot/export_templates/"*/; do
+            echo "-- $d --"; ls "$d" 2>/dev/null | grep -i "android\|\.apk" || echo "   (no android/apk template files here)"
+          done
+          echo "=== also check image original location ==="
+          ls "/root/.local/share/godot/export_templates/"*/ 2>/dev/null | grep -i "android\|\.apk" || echo "   (none in /root)"
           mkdir -p build
           godot --headless --import || true
           godot --headless --verbose --export-debug "Android" build/shooter-arena.apk
