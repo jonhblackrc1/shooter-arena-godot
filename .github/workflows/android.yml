@@ -45,18 +45,25 @@ jobs:
           sed -i 's/^          //' "$HOME/.config/godot/editor_settings-4.tres"
           echo "--- editor_settings-4.tres ---"; cat "$HOME/.config/godot/editor_settings-4.tres"
 
-      - name: Export debug APK
+      - name: Export unsigned APK
         run: |
-          echo "=== export templates dir ==="
-          ls -la "$HOME/.local/share/godot/export_templates/" || echo "(missing templates dir)"
-          for d in "$HOME/.local/share/godot/export_templates/"*/; do
-            echo "-- $d --"; ls "$d" 2>/dev/null | grep -i "android\|\.apk" || echo "   (no android/apk template files here)"
-          done
-          echo "=== also check image original location ==="
-          ls "/root/.local/share/godot/export_templates/"*/ 2>/dev/null | grep -i "android\|\.apk" || echo "   (none in /root)"
           mkdir -p build
           godot --headless --import || true
-          godot --headless --verbose --export-debug "Android" build/shooter-arena.apk
+          godot --headless --verbose --export-debug "Android" build/shooter-arena-unsigned.apk
+          ls -la build/
+
+      - name: Zipalign + sign APK (apksigner)
+        run: |
+          BT="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)"
+          echo "Using build-tools: $BT"
+          "${BT}zipalign" -f -p 4 build/shooter-arena-unsigned.apk build/shooter-arena-aligned.apk
+          "${BT}apksigner" sign \
+            --ks "$GITHUB_WORKSPACE/debug.keystore" \
+            --ks-pass pass:android --key-pass pass:android \
+            --ks-key-alias androiddebugkey \
+            --out build/shooter-arena.apk \
+            build/shooter-arena-aligned.apk
+          "${BT}apksigner" verify --verbose build/shooter-arena.apk
           ls -la build/
 
       - name: Upload APK as artifact
