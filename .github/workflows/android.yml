@@ -21,27 +21,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Bring Godot templates + editor settings into this job's HOME
-        run: |
-          mkdir -p "$HOME/.local/share/godot/export_templates" "$HOME/.config/godot"
-          cp -r /root/.local/share/godot/export_templates/* "$HOME/.local/share/godot/export_templates/" 2>/dev/null || true
-          cp -r /root/.config/godot/* "$HOME/.config/godot/" 2>/dev/null || true
-          echo "--- env ---"; echo "HOME=$HOME"; echo "JAVA_HOME=$JAVA_HOME"; echo "ANDROID_HOME=$ANDROID_HOME"; echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-          echo "--- jvm dirs ---"; ls -d /usr/lib/jvm/* 2>/dev/null || true
-          echo "--- image editor settings android/java keys ---"; grep -iE "java_sdk|android_sdk|debug_keystore" /root/.config/godot/editor_settings-4.tres 2>/dev/null || echo "NONE in image config"
-          echo "--- templates ---"; ls -la "$HOME/.local/share/godot/export_templates/" || true
-
       - name: Generate Android debug keystore
         run: |
           keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android \
-            -keystore "$PWD/debug.keystore" -storepass android \
+            -keystore "$GITHUB_WORKSPACE/debug.keystore" -storepass android \
             -dname "CN=Android Debug,O=Android,C=US" -validity 9999
 
+      - name: Configure Godot (export templates + Android SDK + JDK + keystore)
+        run: |
+          mkdir -p "$HOME/.local/share/godot/export_templates" "$HOME/.config/godot"
+          cp -r /root/.local/share/godot/export_templates/* "$HOME/.local/share/godot/export_templates/" 2>/dev/null || true
+          cat > "$HOME/.config/godot/editor_settings-4.tres" <<EOF
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "/usr/lib/android-sdk"
+          export/android/java_sdk_path = "/usr/lib/jvm/java-17-openjdk-amd64"
+          export/android/debug_keystore = "$GITHUB_WORKSPACE/debug.keystore"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
+          EOF
+          # heredoc above is indented; strip the leading spaces so the .tres is valid
+          sed -i 's/^          //' "$HOME/.config/godot/editor_settings-4.tres"
+          echo "--- editor_settings-4.tres ---"; cat "$HOME/.config/godot/editor_settings-4.tres"
+
       - name: Export debug APK
-        env:
-          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: ${{ github.workspace }}/debug.keystore
-          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
-          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
           mkdir -p build
           godot --headless --import || true
