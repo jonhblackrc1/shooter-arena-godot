@@ -1,0 +1,13 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Exported builds
+/build/
+*.apk
+*.aab
+export_presets.cfg
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
