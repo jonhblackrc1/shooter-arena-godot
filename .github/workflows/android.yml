@@ -21,6 +21,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install matching Android SDK components (build-tools 34 + platform 34)
+        run: |
+          SDKMGR="$(command -v sdkmanager || true)"
+          if [ -z "$SDKMGR" ]; then
+            for c in "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager "$ANDROID_HOME"/cmdline-tools/latest/bin/sdkmanager "$ANDROID_HOME"/tools/bin/sdkmanager; do
+              [ -x "$c" ] && SDKMGR="$c" && break
+            done
+          fi
+          echo "sdkmanager => ${SDKMGR:-NOT FOUND}"
+          if [ -n "$SDKMGR" ]; then
+            yes | "$SDKMGR" --sdk_root="$ANDROID_HOME" --licenses >/dev/null 2>&1 || true
+            "$SDKMGR" --sdk_root="$ANDROID_HOME" "platform-tools" "build-tools;34.0.0" "platforms;android-34" || true
+          fi
+          echo "--- build-tools present ---"; ls "$ANDROID_HOME/build-tools" 2>/dev/null || echo none
+          echo "--- platforms present ---"; ls "$ANDROID_HOME/platforms" 2>/dev/null || echo none
+
       - name: Generate Android debug keystore
         run: |
           keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android \
